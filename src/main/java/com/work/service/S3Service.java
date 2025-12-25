@@ -1,9 +1,15 @@
 package com.work.service;
 
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
+import com.work.constants.ConfigurationConstants;
 import com.work.data.PostNotes;
 import com.work.entities.NotesEntity;
 import com.work.repository.NotesRepository;
@@ -13,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -20,6 +27,9 @@ public class S3Service {
 
     @Autowired
     private AmazonS3 s3Client;
+
+    @Autowired
+    DBService dbService;
 
     @Autowired
     NotesRepository notesRepository;
@@ -33,8 +43,10 @@ public class S3Service {
             ObjectMetadata metadata = new ObjectMetadata();
             metadata.setContentLength(file.getSize());
             metadata.setContentType(file.getContentType());
-
-            PutObjectResult putObjectResult = s3Client.putObject(new PutObjectRequest(bucketName, fileName, file.getInputStream(), metadata));
+            //Map<String, String> props =  dbService.getAWSProperties();
+            //AmazonS3 s3Client = amazonS3Client(props);
+            PutObjectResult putObjectResult = s3Client.putObject(new PutObjectRequest(bucketName, fileName,
+                    file.getInputStream(), metadata));
 
             // Return the URL of the uploaded file
             return s3Client.getUrl(bucketName, fileName).toString();
@@ -49,10 +61,13 @@ public class S3Service {
         notesEntity.setTitle(postNotes.getTitle());
         notesEntity.setNotes(postNotes.getBody());
         String fileUrl = uploadFile(postNotes.getFile());
-        notesEntity.setUrl(fileUrl);
-        NotesEntity notesEntityRslt = insertIntoDB(notesEntity);
-        saveMultipleNotes(notesEntity);
-        return notesEntityRslt;
+        if(fileUrl != null && !fileUrl.trim().isEmpty()) {
+            notesEntity.setUrl(fileUrl);
+            NotesEntity notesEntityRslt = insertIntoDB(notesEntity);
+            saveMultipleNotes(notesEntity);
+            return notesEntityRslt;
+        }
+        return null;
     }
     public void saveMultipleNotes(NotesEntity notesEntity1) {
         for (int i = 1; i <= 10; i++) {
@@ -85,4 +100,15 @@ public class S3Service {
         // Add a timestamp or UUID to ensure a unique filename and avoid overwrites
         return System.currentTimeMillis() + "_" + fileName.replace(" ", "_");
     }
+
+    public AmazonS3 amazonS3Client(Map<String, String> props) {
+        AWSCredentials credentials =
+                new BasicAWSCredentials(props.get(ConfigurationConstants.aws_access_key_id),
+                        ConfigurationConstants.aws_secret_access_key);
+        return AmazonS3ClientBuilder.standard()
+                .withCredentials(new AWSStaticCredentialsProvider(credentials))
+                .withRegion(Regions.US_EAST_1)
+                .build();
+    }
+
 }

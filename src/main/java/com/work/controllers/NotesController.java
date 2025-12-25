@@ -48,10 +48,11 @@ public class NotesController {
         NotesEntity notesEntity = null;
         try {
             notesEntity = s3Service.uploadData(postNotes);
+            return new ResponseEntity(notesEntity, HttpStatus.OK);
         }catch (Exception ex) {
             ex.printStackTrace();
         }
-        return new ResponseEntity(notesEntity, HttpStatus.OK);
+        return new ResponseEntity(new NotesEntity(), HttpStatus.OK);
     }
 
     @GetMapping("/notes/{id}")
