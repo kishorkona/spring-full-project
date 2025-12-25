@@ -25,8 +25,8 @@ import java.util.UUID;
 @Service
 public class S3Service {
 
-    @Autowired
-    private AmazonS3 s3Client;
+    //@Autowired
+    //private AmazonS3 s3Client;
 
     @Autowired
     DBService dbService;
@@ -34,8 +34,8 @@ public class S3Service {
     @Autowired
     NotesRepository notesRepository;
 
-    @Value("${aws.s3.bucket.name}")
-    private String bucketName;
+    //@Value("${aws.s3.bucket.name}")
+    //private String bucketName;
 
     public String uploadFile(MultipartFile file) {
         try {
@@ -43,11 +43,11 @@ public class S3Service {
             ObjectMetadata metadata = new ObjectMetadata();
             metadata.setContentLength(file.getSize());
             metadata.setContentType(file.getContentType());
-            //Map<String, String> props =  dbService.getAWSProperties();
-            //AmazonS3 s3Client = amazonS3Client(props);
+            Map<String, String> props =  dbService.getAWSProperties();
+            AmazonS3 s3Client = amazonS3Client(props);
+            String bucketName = props.get(ConfigurationConstants.aws_s3_bucket_name);
             PutObjectResult putObjectResult = s3Client.putObject(new PutObjectRequest(bucketName, fileName,
                     file.getInputStream(), metadata));
-
             // Return the URL of the uploaded file
             return s3Client.getUrl(bucketName, fileName).toString();
         } catch (Exception ex) {
@@ -102,9 +102,11 @@ public class S3Service {
     }
 
     public AmazonS3 amazonS3Client(Map<String, String> props) {
-        AWSCredentials credentials =
-                new BasicAWSCredentials(props.get(ConfigurationConstants.aws_access_key_id),
-                        ConfigurationConstants.aws_secret_access_key);
+        String apiKey = props.get(ConfigurationConstants.aws_access_key_id);
+        String apiSecret = props.get(ConfigurationConstants.aws_secret_access_key);
+        //String region = props.get(ConfigurationConstants.aws_region);
+        //Regions regions = Regions.valueOf(region);
+        AWSCredentials credentials = new BasicAWSCredentials(apiKey,apiSecret);
         return AmazonS3ClientBuilder.standard()
                 .withCredentials(new AWSStaticCredentialsProvider(credentials))
                 .withRegion(Regions.US_EAST_1)

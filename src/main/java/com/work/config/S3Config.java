@@ -1,4 +1,4 @@
-
+/*
 package com.work.config;
 
 import com.amazonaws.auth.AWSCredentials;
@@ -34,3 +34,4 @@ public class S3Config {
     }
 
 }
+*/
